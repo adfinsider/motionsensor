@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sensor
+spec:
+  selector:
+    matchLabels:
+      run: sensor
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: sensor
+    spec:
+      containers:
+      - name: motionsensor 
+        image: $IMAGE
+        env:
+        - name: PORT
+          value: "8000"
+        - name: QHOST
+          value: "questdb-headless.default.svc.cluster.local"
+        - name: QUSER
+          value: "sensor"
+        - name: QPASSWORD
+          value: "9Pvby8(-UN<OsptV"
+       
+      imagePullSecrets:
+      - name: regcred

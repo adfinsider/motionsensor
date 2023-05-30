@@ -1,0 +1,37 @@
+stages:
+  - build
+  - deploy
+ 
+    
+build:
+  stage: build
+  only:
+    - main
+    - CICD
+  image: docker:18-git
+  services:
+    - docker:18-dind
+  script:
+    # get node app version from package.json for use in tagging docker image
+    - apk update && apk add jq
+    - export VERSION=`jq -r ".version" < ./package.json`
+    # login to docker
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    # build and tag docker image
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_BUILD_REF_NAME.$CI_COMMIT_SHORT_SHA .
+    # publish finished image
+    - docker push $CI_REGISTRY_IMAGE:$CI_BUILD_REF_NAME.$CI_COMMIT_SHORT_SHA
+    #- docker push $CI_REGISTRY_IMAGE:latest
+deploy:
+  stage: deploy
+  only:
+    - main
+    - CICD
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: ['']
+  script:
+    - export IMAGE=$CI_REGISTRY_IMAGE:$CI_BUILD_REF_NAME.$CI_COMMIT_SHORT_SHA
+    - kubectl config get-contexts
+    - kubectl config use-context sensor3/motionsensor:live-agent
+    - eval "echo \"$(sed 's/"/\\"/g' deployment.yaml)\"" | kubectl apply -f -
